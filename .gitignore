@@ -1,0 +1,89 @@
+# ============================================================
+# SokoLink .gitignore
+# Never commit secrets, compiled artefacts, or editor files.
+# ============================================================
+
+# ── Secrets and environment (CRITICAL – never commit) ───────────────────────
+.env
+*.env
+.env.*
+!.env.example          # keep the example template
+*.pem
+*.key
+*.p12
+*.keystore
+*.jks
+google-services.json
+GoogleService-Info.plist
+serviceAccountKey.json
+*_credentials.json
+*.secret
+
+# ── Python / Django ──────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+pip-wheel-metadata/
+*.pyo
+
+# Django generated files
+backend/db.sqlite3
+backend/staticfiles/
+backend/media/
+backend/*.log
+
+# ── Flutter / Dart ────────────────────────────────────────────────────────────
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/build/
+mobile/.pub-cache/
+mobile/android/.gradle/
+mobile/android/app/debug/
+mobile/android/app/profile/
+mobile/android/app/release/
+mobile/android/local.properties
+mobile/android/key.properties    # signing keys – never commit
+mobile/ios/Pods/
+mobile/ios/.symlinks/
+mobile/ios/Flutter/Generated.xcconfig
+mobile/ios/Runner/GeneratedPluginRegistrant.*
+mobile/*.log
+
+# ── OS and editor files ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+
+# ── Certificates and TLS (T16) ───────────────────────────────────────────────
+*.crt
+*.cer
+*.der
+# Exception: public cert pins committed for certificate pinning are intentional
+# but should be reviewed before commit.
+
+# ── Security scan outputs ────────────────────────────────────────────────────
+bandit-report.json
+semgrep-report.json
+pip-audit-report.json
+gitleaks-report.json
+osv-report.json
+zap-report.*
+mobsf-report.*

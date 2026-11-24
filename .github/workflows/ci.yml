@@ -1,0 +1,201 @@
+name: CI – Security and Quality
+
+# Trigger on every push and pull request to main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Minimal permissions – principle of least privilege (T8)
+permissions:
+  contents: read
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────
+  # 1. Secret scanning (Gitleaks) – runs first; a secret blocks everything.
+  # ─────────────────────────────────────────────────────────────────────────
+  secrets:
+    name: Secret scan (Gitleaks)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0   # full history so Gitleaks can scan all commits
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 2. Python SAST – Bandit + Semgrep (T14: vulnerable code patterns)
+  # ─────────────────────────────────────────────────────────────────────────
+  sast:
+    name: Python SAST (Bandit + Semgrep)
+    runs-on: ubuntu-24.04
+    needs: secrets
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: '3.12'
+
+      - name: Install SAST tools
+        run: pip install bandit==1.8.3 semgrep==1.108.0
+
+      - name: Bandit – Python security linter
+        # -ll = medium and above; -x = exclude venv/tests from SAST
+        run: |
+          bandit -r backend/ \
+            -ll \
+            -x backend/tests/,backend/.venv/ \
+            --format json \
+            --output bandit-report.json || true
+          bandit -r backend/ \
+            -ll \
+            -x backend/tests/,backend/.venv/
+
+      - name: Semgrep – Django, Python, secrets rulesets
+        run: |
+          semgrep scan \
+            --config p/django \
+            --config p/python \
+            --config p/secrets \
+            --error \
+            --json \
+            --output semgrep-report.json \
+            backend/
+
+      - name: Upload SAST reports
+        if: always()
+        uses: actions/upload-artifact@v4.5.0
+        with:
+          name: sast-reports
+          path: |
+            bandit-report.json
+            semgrep-report.json
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 3. Dependency scanning – pip-audit + OSV-Scanner (T14)
+  # ─────────────────────────────────────────────────────────────────────────
+  deps:
+    name: Dependency scan (pip-audit + OSV-Scanner)
+    runs-on: ubuntu-24.04
+    needs: secrets
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: '3.12'
+
+      - name: Install pip-audit
+        run: pip install pip-audit==2.8.0
+
+      - name: pip-audit – Python dependency vulnerabilities
+        # Scans requirements.txt; fails on any high or critical CVE
+        run: |
+          pip-audit \
+            -r backend/requirements.txt \
+            --format json \
+            --output pip-audit-report.json || true
+          pip-audit -r backend/requirements.txt
+
+      - name: OSV-Scanner – Python + Flutter dependency vulnerabilities
+        uses: google/osv-scanner-action@v2.0.2
+        with:
+          scan-args: |-
+            --lockfile=backend/requirements.txt
+            --lockfile=mobile/pubspec.lock
+
+      - name: Upload dependency reports
+        if: always()
+        uses: actions/upload-artifact@v4.5.0
+        with:
+          name: dep-reports
+          path: pip-audit-report.json
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 4. Backend tests – pytest with SQLite (no MySQL needed in CI)
+  # ─────────────────────────────────────────────────────────────────────────
+  backend-tests:
+    name: Backend tests (pytest)
+    runs-on: ubuntu-24.04
+    needs: secrets
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        # mysqlclient is skipped here because CI uses SQLite (see test.py).
+        # We install everything else from requirements.txt, then override
+        # the DB driver for the test run.
+        run: |
+          pip install \
+            Django==5.1.7 \
+            djangorestframework==3.15.2 \
+            djangorestframework-simplejwt==5.5.0 \
+            argon2-cffi==23.1.0 \
+            django-environ==0.11.2 \
+            channels==4.2.2 \
+            channels-redis==4.2.1 \
+            daphne==4.1.2 \
+            Pillow==11.2.1 \
+            drf-spectacular==0.28.0 \
+            pytest==8.3.5 \
+            pytest-django==4.10.0 \
+            factory-boy==3.3.3 \
+            uvicorn==0.34.2
+
+      - name: Run pytest
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.test
+          SECRET_KEY: ci-only-secret-key-not-real
+        run: pytest -v
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 5. Flutter – dart analyze + flutter test
+  # ─────────────────────────────────────────────────────────────────────────
+  flutter:
+    name: Flutter (analyze + test)
+    runs-on: ubuntu-24.04
+    needs: secrets
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2.18.0
+        with:
+          flutter-version: '3.41.6'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: dart analyze (strict)
+        run: dart analyze --fatal-infos
+
+      - name: flutter test
+        run: flutter test

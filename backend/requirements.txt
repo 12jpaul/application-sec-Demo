@@ -1,0 +1,37 @@
+# SokoLink backend dependencies – all versions pinned (T14: vulnerable dependencies)
+# To upgrade: run pip-audit and OSV-Scanner first, review changes, then update pins.
+
+# ── Core framework ──────────────────────────────────────────────────────────
+Django==5.1.7
+djangorestframework==3.15.2
+
+# ── Authentication ───────────────────────────────────────────────────────────
+djangorestframework-simplejwt==5.5.0
+
+# ── Password hashing (SR-01: Argon2) ─────────────────────────────────────────
+argon2-cffi==23.1.0
+
+# ── Environment / secrets (rule: secrets from env vars only) ─────────────────
+django-environ==0.11.2
+
+# ── Real-time chat (SR-10: WebSockets) ───────────────────────────────────────
+channels==4.2.2
+channels-redis==4.2.1
+daphne==4.1.2
+
+# ── Database ─────────────────────────────────────────────────────────────────
+mysqlclient==2.2.6
+
+# ── Images (SR-07: re-encode, strip EXIF) ────────────────────────────────────
+Pillow==11.2.1
+
+# ── API docs ─────────────────────────────────────────────────────────────────
+drf-spectacular==0.28.0
+
+# ── Testing ──────────────────────────────────────────────────────────────────
+pytest==8.3.5
+pytest-django==4.10.0
+factory-boy==3.3.3
+
+# ── ASGI / async support ─────────────────────────────────────────────────────
+uvicorn==0.34.2

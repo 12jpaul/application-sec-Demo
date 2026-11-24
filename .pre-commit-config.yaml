@@ -1,0 +1,58 @@
+# pre-commit hooks – run on every `git commit`.
+# Install once: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+#
+# Hooks are ordered: secrets first, then linting, then formatting.
+# A blocked commit shows which file and line triggered the rule.
+
+repos:
+  # ── Secret scanning (MUST be first – T14 / T17) ────────────────────────────
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+        name: Gitleaks – detect secrets
+        # Blocks commit if any secret pattern is matched in staged files.
+        # Config can be extended in .gitleaks.toml for project-specific patterns.
+
+  # ── Python linting and formatting ──────────────────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.6
+    hooks:
+      - id: ruff
+        name: Ruff – Python linter
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+        name: Ruff – Python formatter
+
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        name: Black – Python code formatter
+        language_version: python3
+
+  # ── Basic file hygiene ──────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]           # block accidentally committed binaries
+      - id: detect-private-key        # extra layer on top of Gitleaks
+
+  # ── Dart / Flutter formatting ───────────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: dart-format
+        name: dart format
+        language: system
+        entry: dart format
+        args: [--set-exit-if-changed, mobile/lib, mobile/test]
+        types: [file]
+        files: \.dart$
+        pass_filenames: false

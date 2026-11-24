@@ -1,0 +1,23 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    # Treat all analysis issues as errors so CI fails on any finding
+    todo: ignore         # TODOs are allowed
+    unused_import: error
+    unused_local_variable: error
+  strong-mode:
+    implicit-casts: false
+    implicit-dynamic: false
+
+linter:
+  rules:
+    # Security-relevant rules
+    avoid_print: true              # no debug output in release builds (rule 13)
+    avoid_web_libraries_in_flutter: true
+    cancel_subscriptions: true
+    close_sinks: true
+    # Code quality
+    prefer_const_constructors: true
+    prefer_final_fields: true
+    always_declare_return_types: true
