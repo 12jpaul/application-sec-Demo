@@ -46,7 +46,9 @@ jobs:
           python-version: '3.12'
 
       - name: Install SAST tools
-        run: pip install bandit==1.8.3 semgrep==1.108.0
+        # semgrep 1.177.0 matches the version tested locally (1.108.0 had
+        # engine-level differences that caused false-positive exits on CI).
+        run: pip install bandit==1.8.3 semgrep==1.177.0
 
       - name: Bandit – Python security linter
         # -ll = medium and above; -x = exclude venv/tests from SAST
@@ -62,6 +64,7 @@ jobs:
 
       - name: Semgrep – Django, Python, secrets rulesets
         run: |
+          set +e
           semgrep scan \
             --config p/django \
             --config p/python \
@@ -70,6 +73,12 @@ jobs:
             --json \
             --output semgrep-report.json \
             backend/
+          SEMGREP_EXIT=$?
+          if [ "$SEMGREP_EXIT" != "0" ] && [ -f semgrep-report.json ]; then
+            echo "=== SEMGREP FINDINGS ==="
+            python3 -c "import json,sys; r=json.load(open('semgrep-report.json')); print(len(r.get('results',[])),'findings'); [print('RULE:',f['check_id'],'FILE:',f['path']+':'+str(f['start']['line']),'MSG:',f['extra']['message'][:200]) for f in r.get('results',[])]"
+          fi
+          exit $SEMGREP_EXIT
 
       - name: Upload SAST reports
         if: always()
