@@ -4,6 +4,7 @@ Environment-specific files (dev.py, prod.py, test.py) import from here.
 Secrets are loaded exclusively from environment variables via django-environ.
 Never hard-code secrets here (Security rule 10 / T17).
 """
+
 from datetime import timedelta
 from pathlib import Path
 
@@ -107,9 +108,13 @@ PASSWORD_HASHERS = [
 ]
 
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-     "OPTIONS": {"min_length": 10}},  # SR-01: ≥ 10 characters
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 10},
+    },  # SR-01: ≥ 10 characters
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
@@ -132,6 +137,14 @@ MEDIA_URL = env("MEDIA_URL", default="/media/")
 MEDIA_ROOT = BASE_DIR / env("MEDIA_ROOT", default="media/")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ---------------------------------------------------------------------------
+# Custom user model – phone as identifier (SR-01 / T1)
+# Must be set before the first migration is generated for accounts.
+# ---------------------------------------------------------------------------
+AUTH_USER_MODEL = (
+    "accounts.User"  # Mitigates T1: phone-based identity, no guessable username
+)
 
 # ---------------------------------------------------------------------------
 # Django REST Framework – secure defaults
@@ -163,10 +176,10 @@ REST_FRAMEWORK = {
 # JWT – djangorestframework-simplejwt (SR-02 / T2)
 # ---------------------------------------------------------------------------
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),   # short-lived access tokens
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),  # short-lived access tokens
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-    "ROTATE_REFRESH_TOKENS": True,       # each use issues a new refresh token
-    "BLACKLIST_AFTER_ROTATION": True,    # old refresh tokens are invalidated
+    "ROTATE_REFRESH_TOKENS": True,  # each use issues a new refresh token
+    "BLACKLIST_AFTER_ROTATION": True,  # old refresh tokens are invalidated
     "UPDATE_LAST_LOGIN": True,
     "ALGORITHM": "HS256",
     "SIGNING_KEY": env("SECRET_KEY"),
@@ -239,7 +252,7 @@ LOGGING = {
         },
         "django.request": {
             "handlers": ["console"],
-            "level": "ERROR",   # no request bodies in logs (T17)
+            "level": "ERROR",  # no request bodies in logs (T17)
             "propagate": False,
         },
         # sokolink.security captures: login, OTP failures, role changes,
