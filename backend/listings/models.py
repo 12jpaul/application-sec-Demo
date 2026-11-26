@@ -1,0 +1,177 @@
+"""
+Listings models: Category, Listing, ListingImage.
+
+Security notes
+--------------
+T3  / SR-03 : Ownership check on every mutation.  Return 404 (not 403) so
+              a non-owner cannot confirm that the listing exists.
+T4  / SR-04 : `price` is a server-side field.  The serializer for order
+              creation MUST ignore any price value sent by the client and read
+              it from the stored Listing instead.
+T7  / SR-07 : Search uses Django ORM QuerySet filtering (no raw SQL).
+T9  / SR-09 : Only district/sector are stored – never an exact address or phone.
+T10 / SR-07 : Images are accepted only as JPEG/PNG, re-encoded by Pillow,
+              EXIF-stripped, and saved with a random file name (Phase 3).
+T11 / SR-07 : EXIF (including GPS) is removed before storage.  file_path is
+              never returned directly; images are served via signed URLs only.
+"""
+
+import uuid
+
+from django.conf import settings
+from django.db import models
+
+
+# ---------------------------------------------------------------------------
+# Category
+# ---------------------------------------------------------------------------
+
+
+class Category(models.Model):
+    """
+    Admin-managed product categories.
+    No user FK – categories are global and edited only by admins (T8/SR-03).
+    """
+
+    name = models.CharField(max_length=80, unique=True)
+    slug = models.SlugField(max_length=80, unique=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name_plural = "categories"
+        indexes = [
+            models.Index(fields=["is_active"]),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+# ---------------------------------------------------------------------------
+# Listing
+# ---------------------------------------------------------------------------
+
+
+class Listing(models.Model):
+    """
+    A product or service offered by a seller.
+
+    Access rule: seller FK is the owner.  Any write that is not by the owner
+    must return 404 (T3/SR-03).  Moderators may change status to hidden.
+
+    price: ALWAYS read from this model when creating/pricing an order.
+           NEVER accept a price value from the client (T4/SR-04).
+
+    Location: only district + sector; exact address is never stored (T9/SR-09).
+    """
+
+    class Condition(models.TextChoices):
+        NEW = "new", "New"
+        USED = "used", "Used"
+        REFURBISHED = "refurbished", "Refurbished"
+
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        PENDING_REVIEW = "pending_review", "Pending review"
+        HIDDEN = "hidden", "Hidden by moderator"
+        DELETED = "deleted", "Deleted by seller"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # T3/SR-03: seller is the owner – 404 for any other user trying to mutate
+    seller = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="listings",
+        limit_choices_to={"is_seller": True},
+    )
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.PROTECT,  # prevent accidental category deletion
+        related_name="listings",
+    )
+
+    title = models.CharField(max_length=200)
+    description = models.TextField(max_length=5000, blank=True)
+
+    # T4/SR-04: price is authoritative; order creation reads this field
+    price = models.DecimalField(max_digits=12, decimal_places=2)
+
+    condition = models.CharField(
+        max_length=20,
+        choices=Condition.choices,
+        default=Condition.USED,
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING_REVIEW,  # T1: first listings held for review
+    )
+
+    # T9/SR-09: approximate location only – no exact address, no phone number
+    district = models.CharField(max_length=60)
+    sector = models.CharField(max_length=60, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    view_count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["seller"]),
+            models.Index(fields=["category"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["district"]),
+            models.Index(fields=["created_at"]),
+            # MySQL FULLTEXT index on title+description is added manually in
+            # the migration (Phase 3) once the app connects to MySQL (T7).
+        ]
+
+    def __str__(self):
+        return f"{self.title} ({self.status})"
+
+
+# ---------------------------------------------------------------------------
+# ListingImage
+# ---------------------------------------------------------------------------
+
+
+class ListingImage(models.Model):
+    """
+    An image attached to a listing.
+
+    file_path is a random-name path in private storage.
+    It MUST NOT be returned directly in API responses; images are served
+    through short-lived signed URLs generated by Django (T11/SR-07).
+
+    Phase 3 upload pipeline: type check → size check → Pillow re-encode →
+    EXIF strip → random file name → private storage write → record here.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    listing = models.ForeignKey(
+        Listing,
+        on_delete=models.CASCADE,
+        related_name="images",
+    )
+
+    # T11/SR-07: private storage path; never returned raw; served via signed URL
+    file_path = models.CharField(max_length=512)
+
+    display_order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["listing", "display_order"],
+                name="unique_image_order_per_listing",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["listing"]),
+        ]
+        ordering = ["listing", "display_order"]
+
+    def __str__(self):
+        return f"Image {self.display_order} for listing {self.listing_id}"
