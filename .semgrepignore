@@ -11,3 +11,9 @@ backend/config/settings/
 # Test files – contain intentional insecure-by-design patterns
 # (in-memory SQLite, django-insecure- key prefix) needed for local dev.
 backend/tests/
+
+# .env.example contains placeholder values (change-me-*) for every env var.
+# p/secrets fires on variable names like API_KEY and WEBHOOK_SECRET regardless
+# of whether the value is a real secret. This file must stay in the repo as a
+# setup guide; it must never contain real credentials.
+backend/.env.example
