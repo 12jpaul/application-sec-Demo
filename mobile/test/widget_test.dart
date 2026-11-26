@@ -3,12 +3,12 @@
 //
 // Extended per-feature tests are added in Phase 2 onwards under test/features/.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sokolink/main.dart';
 
 void main() {
-  testWidgets('SokoLink placeholder screen renders app title', (WidgetTester tester) async {
+  testWidgets('SokoLink placeholder screen renders app title',
+      (WidgetTester tester) async {
     await tester.pumpWidget(const SokoLinkApp());
     expect(find.text('SokoLink'), findsOneWidget);
   });

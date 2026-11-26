@@ -8,11 +8,14 @@ MySQL server. Using SQLite in-memory keeps CI fast and dependency-free while
 still exercising the same Django ORM query logic. Prod parity is verified in
 the staging deployment (Phase 9).
 """
+
 import os
 
 # Seed required env vars BEFORE base.py imports them via django-environ.
 # These are test-only dummy values and are never used in production.
-os.environ.setdefault("SECRET_KEY", "test-only-secret-key-not-used-in-production")  # noqa: S105
+os.environ.setdefault(
+    "SECRET_KEY", "django-insecure-test-only-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+)  # nosemgrep # noqa: S105
 os.environ.setdefault("DATABASE_URL", "sqlite://:memory:")
 
 from .base import *  # noqa: F401, F403
@@ -39,7 +42,7 @@ CHANNEL_LAYERS = {
 # ---------------------------------------------------------------------------
 # Minimal secrets for tests (not real values)
 # ---------------------------------------------------------------------------
-SECRET_KEY = "test-secret-key-not-used-in-production-at-all"  # noqa: S105
+SECRET_KEY = "django-insecure-test-only-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"  # nosemgrep # noqa: S105
 
 DEBUG = False  # keep DEBUG=False to catch prod-only code paths
 

@@ -1,0 +1,10 @@
+# Semgrep ignore file
+# Files listed here are excluded from all Semgrep scans.
+
+# Test settings contain intentionally insecure placeholder values
+# (django-insecure- prefix, in-memory SQLite URL) that are never used
+# in production. The p/secrets ruleset would otherwise flag them.
+backend/config/settings/test.py
+
+# Dev settings use localhost-only values, not real credentials
+backend/config/settings/dev.py
