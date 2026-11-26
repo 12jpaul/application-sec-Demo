@@ -2,9 +2,10 @@
 Root URL configuration.
 Feature URLs are added in later phases as apps are built out.
 """
+
 from django.contrib import admin
 from django.http import JsonResponse
-from django.urls import include, path
+from django.urls import path
 
 
 def health(_request):
@@ -19,7 +20,9 @@ def health(_request):
 
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    # Custom admin path – avoids exposing admin at the guessable default /admin/
+    # (Semgrep p/django avoid-admin-url; also reduces automated attack surface)
+    path("soko-mgmt/", admin.site.urls),
     path("api/health/", health, name="health"),
     # JWT auth endpoints – added in Phase 2
     # path("api/auth/", include("accounts.urls")),

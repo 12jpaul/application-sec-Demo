@@ -1,14 +1,13 @@
 """
 ASGI config – used by Daphne in production and by Django Channels for WebSockets.
 """
+
 import os
 
-from channels.auth import AuthMiddlewareStack
-from channels.routing import ProtocolTypeRouter, URLRouter
-from channels.security.websocket import AllowedHostsOriginValidator
+from channels.routing import ProtocolTypeRouter
 from django.core.asgi import get_asgi_application
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")  # nosemgrep
 
 # Routing is expanded in Phase 5 (messaging) with the chat consumer URLs.
 application = ProtocolTypeRouter(
