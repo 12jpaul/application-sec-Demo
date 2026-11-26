@@ -6,8 +6,12 @@
 # ── Secrets and environment (CRITICAL – never commit) ───────────────────────
 .env
 *.env
-.env.*
-!.env.example          # keep the example template
+.env.local
+.env.development
+.env.staging
+.env.production
+.env.test
+# .env.example is intentionally NOT ignored – it is a safe template with no real secrets
 *.pem
 *.key
 *.p12

@@ -32,7 +32,7 @@ dependencies:
   flutter_secure_storage: 9.2.4
 
   # Encrypted local cache (SQLCipher) – key stored in secure storage (T15)
-  sqflite_sqlcipher: 2.3.0+1
+  sqflite_sqlcipher: 3.4.1
 
   # Real-time chat (Phase 5)
   web_socket_channel: 3.0.3
