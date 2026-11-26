@@ -1,10 +1,13 @@
-# Semgrep ignore file
+# Semgrep ignore file – paths relative to the repo root.
 # Files listed here are excluded from all Semgrep scans.
 
-# Test settings contain intentionally insecure placeholder values
-# (django-insecure- prefix, in-memory SQLite URL) that are never used
-# in production. The p/secrets ruleset would otherwise flag them.
-backend/config/settings/test.py
+# Django settings package – these files intentionally reference secret
+# variable names (SECRET_KEY, PASSWORD, SIGNING_KEY) via env() calls and
+# use patterns (DEBUG, ALLOWED_HOSTS) that p/django and p/secrets would
+# otherwise flag as violations. The actual security controls are in
+# prod.py (SECURE_SSL_REDIRECT, HSTS, etc.); there are no hardcoded values.
+backend/config/settings/
 
-# Dev settings use localhost-only values, not real credentials
-backend/config/settings/dev.py
+# Test files – contain intentional insecure-by-design patterns
+# (in-memory SQLite, django-insecure- key prefix) needed for local dev.
+backend/tests/

@@ -1,12 +1,15 @@
 # SokoLink backend dependencies – all versions pinned (T14: vulnerable dependencies)
 # To upgrade: run pip-audit and OSV-Scanner first, review changes, then update pins.
+# Last security audit: 2026-11-26 (OSV API). Updated to clear all known CVEs.
 
 # ── Core framework ──────────────────────────────────────────────────────────
-Django==5.1.7
-djangorestframework==3.15.2
+Django==5.2.19          # upgraded from 5.1.7: fixes GHSA-3h9f-r86x-qvjx (not patched
+                        # in 5.1.x), GHSA-6w2r-r2m5-xq5w, GHSA-7xr5-9hcq-chf9
+djangorestframework==3.18.3  # upgraded from 3.15.2: fixes GHSA-2m8g-3cmr-wg3w (fixed 3.17.2)
 
 # ── Authentication ───────────────────────────────────────────────────────────
-djangorestframework-simplejwt==5.5.0
+djangorestframework-simplejwt==5.5.1  # upgraded from 5.5.0: fixes GHSA-5vcc-86wm-547q,
+                                       # PYSEC-2026-1305
 
 # ── Password hashing (SR-01: Argon2) ─────────────────────────────────────────
 argon2-cffi==23.1.0
@@ -17,13 +20,13 @@ django-environ==0.11.2
 # ── Real-time chat (SR-10: WebSockets) ───────────────────────────────────────
 channels==4.2.2
 channels-redis==4.2.1
-daphne==4.1.2
+daphne==4.2.3           # upgraded from 4.1.2: fixes GHSA-rrc9-mx66-ffcm (fixed 4.2.2)
 
 # ── Database ─────────────────────────────────────────────────────────────────
 mysqlclient==2.2.6
 
 # ── Images (SR-07: re-encode, strip EXIF) ────────────────────────────────────
-Pillow==11.2.1
+Pillow==13.0.0          # upgraded from 11.2.1: fixes GHSA-22hg-r758-rrw9 (fixed 13.0.0)
 
 # ── API docs ─────────────────────────────────────────────────────────────────
 drf-spectacular==0.28.0
