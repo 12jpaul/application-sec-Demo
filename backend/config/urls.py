@@ -5,7 +5,7 @@ Feature URLs are added in later phases as apps are built out.
 
 from django.contrib import admin
 from django.http import JsonResponse
-from django.urls import path
+from django.urls import include, path
 
 
 def health(_request):
@@ -24,8 +24,7 @@ urlpatterns = [
     # (Semgrep p/django avoid-admin-url; also reduces automated attack surface)
     path("soko-mgmt/", admin.site.urls),
     path("api/health/", health, name="health"),
-    # JWT auth endpoints – added in Phase 2
-    # path("api/auth/", include("accounts.urls")),
+    path("api/auth/", include("accounts.urls")),  # JWT auth (Phase 2)
     # Feature endpoints added per phase:
     # path("api/", include("listings.urls")),
     # path("api/", include("orders.urls")),
