@@ -15,7 +15,19 @@ import uuid
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db import models
+
+# T8: explicit allowlist prevents using the Report system as a probe into
+# internal models (AuditLog, Order, Payment, …) that are not user-facing.
+REPORTABLE_CONTENT_TYPES: frozenset = frozenset(
+    [
+        ("listings", "listing"),
+        ("messaging", "message"),
+        ("accounts", "user"),
+        ("profiles", "review"),
+    ]
+)
 
 
 # ---------------------------------------------------------------------------
@@ -77,6 +89,26 @@ class Report(models.Model):
             models.Index(fields=["content_type", "object_id"]),
             models.Index(fields=["reporter"]),
         ]
+
+    def clean(self):
+        """
+        Restrict content_type to the REPORTABLE_CONTENT_TYPES allowlist.
+        Mitigates T8: prevents the Report API from being used as a probe against
+        internal models (AuditLog, Order, Payment, …) or future models added to
+        the project that should not be user-reportable.
+        """
+        if self.content_type_id:
+            ct = self.content_type
+            key = (ct.app_label, ct.model)
+            if key not in REPORTABLE_CONTENT_TYPES:
+                raise ValidationError(
+                    {
+                        "content_type": (
+                            f"Reports may not target {ct.app_label}.{ct.model}. "
+                            "Only Listing, Message, User, and Review may be reported."
+                        )
+                    }
+                )
 
     def __str__(self):
         return f"Report({self.reason}) by {self.reporter_id} [{self.status}]"
