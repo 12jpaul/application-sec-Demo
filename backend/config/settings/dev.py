@@ -3,6 +3,7 @@ Development settings.
 Uses DEBUG=True, SQLite (optional override), console backends for email/SMS.
 Never deploy this to production.
 """
+
 from .base import *  # noqa: F401, F403
 
 DEBUG = True

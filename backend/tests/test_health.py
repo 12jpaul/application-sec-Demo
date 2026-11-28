@@ -3,6 +3,7 @@ Tests for the /api/health/ liveness endpoint.
 Phase 0 – ensures pytest has at least one test to collect so CI does not fail
 with "no tests collected".
 """
+
 import pytest
 from django.test import Client
 
