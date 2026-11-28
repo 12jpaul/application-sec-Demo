@@ -180,6 +180,19 @@ jobs:
             factory-boy==3.3.3 \
             uvicorn==0.34.2
 
+      - name: Show installed packages
+        run: pip list
+
+      - name: Diagnose warnings (no filterwarnings=error)
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.test
+          SECRET_KEY: ci-only-secret-key-not-real
+        # Run once without filterwarnings=error to distinguish test failures
+        # from warning-as-error failures.  continue-on-error so the real
+        # pytest step below still runs and reports the definitive result.
+        continue-on-error: true
+        run: pytest -v -p no:warnings --tb=short 2>&1 | head -120
+
       - name: Run pytest
         env:
           DJANGO_SETTINGS_MODULE: config.settings.test
