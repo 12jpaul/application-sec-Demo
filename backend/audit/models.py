@@ -73,6 +73,9 @@ class AuditLog(models.Model):
     class Action(models.TextChoices):
         LOGIN_SUCCESS = "login_success", "Login success"
         LOGIN_FAILURE = "login_failure", "Login failure"
+        LOGOUT = "logout", "Logout"
+        SIGNUP = "signup", "Account sign-up"
+        DEVICE_TRUSTED = "device_trusted", "Device trusted"
         OTP_REQUESTED = "otp_requested", "OTP requested"
         OTP_FAILED = "otp_failed", "OTP verification failed"
         OTP_SUCCESS = "otp_success", "OTP verification succeeded"
