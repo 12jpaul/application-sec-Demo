@@ -10,6 +10,9 @@ T2  / SR-02 : OTP required for new-device login and payout-number change.
               Keying with a server secret prevents offline brute-force of 6-digit
               codes (only 10^6 values) even if the database is leaked.
               Max 5 attempts; 5-minute expiry.
+              Lockout: 5 wrong passwords → login_locked_until = now()+15 min;
+              failed_login_count reset to 0 when lockout fires (fresh 5 attempts
+              after timeout); also reset on successful login.
 T9  / SR-09 : Phone number is private.  It is NEVER included in public API
               responses; shared only inside an order between its buyer and seller.
 T17 / SR-12 : OTP code hashes must never appear in logs or error messages.
@@ -100,6 +103,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     date_joined = models.DateTimeField(default=timezone.now)
     # last_login is provided by AbstractBaseUser
 
+    # T2/SR-02: brute-force lockout – incremented atomically with F() expressions
+    # in LoginView; reset to 0 after successful login OR when lockout fires.
+    failed_login_count = models.PositiveSmallIntegerField(default=0)
+    # Null = not locked; set to now()+15min on the 5th wrong password.
+    # Reset to null after the lockout expires and the user logs in successfully.
+    login_locked_until = models.DateTimeField(null=True, blank=True)
+
     USERNAME_FIELD = "phone"
     REQUIRED_FIELDS = ["display_name"]
 
@@ -110,6 +120,13 @@ class User(AbstractBaseUser, PermissionsMixin):
             models.Index(fields=["is_seller", "is_active"]),
             models.Index(fields=["is_moderator"]),
         ]
+
+    @property
+    def is_login_locked(self) -> bool:
+        """True when the account is currently under a temporary lockout (T2/SR-02)."""
+        return bool(
+            self.login_locked_until and timezone.now() < self.login_locked_until
+        )
 
     def __str__(self):
         return f"{self.display_name} ({self.phone})"
