@@ -48,6 +48,7 @@ above.  Test cases ST-01 to ST-14 (implemented in Phase 8) verify each control.
 | Risk | Accepted because |
 |------|-----------------|
 | T12 (Repudiation, risk 12) | AuditLog immutability is enforced at application level only; database-level enforcement (trigger or revoked UPDATE/DELETE privileges) planned for Phase 9. |
+| T13 (SMS flooding, risk 12) — LocMemCache caveat | `CACHES["default"] = locmemcache://` is per-process. In a multi-worker production deployment, throttle counters and lockout timers are **not** shared across workers. Production **must** set `CACHE_URL=redis://…` to enforce limits globally. Tracked in Phase 9 deployment checklist. |
 | T15 (Lost phone, risk 9) | SQLCipher + secure storage reduce impact to low; remote logout available |
 | T16 (MITM, risk 8) | TLS enforced at network layer; cert pinning adds defence-in-depth in Phase 7 |
 | T17 (Secrets in logs, risk 6) | Logging rules enforced in code review and CI; risk low with Argon2 and no plaintext storage |
