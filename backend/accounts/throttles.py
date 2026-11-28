@@ -56,6 +56,26 @@ class LoginThrottle(SimpleRateThrottle):
 
     scope = "login"
 
+    def parse_rate(self, rate):
+        """
+        Extend SimpleRateThrottle.parse_rate to support multi-unit minute
+        periods (e.g. "10/15min" → 10 requests per 900 seconds).
+
+        DRF's default implementation only reads period[0], which chokes on
+        "15min" because '1' is not a valid period key.  This override handles
+        the "Xmin" suffix used in DEFAULT_THROTTLE_RATES["login"].
+        """
+        if rate is None:
+            return None, None
+        num, period = rate.split("/")
+        num_requests = int(num)
+        if period.endswith("min") and len(period) > 3:
+            # e.g. "15min" → 15 * 60 = 900 seconds
+            duration = int(period[:-3]) * 60
+        else:
+            duration = {"s": 1, "m": 60, "h": 3600, "d": 86400}[period[0]]
+        return num_requests, duration
+
     def get_cache_key(self, request, view):
         return self.cache_format % {
             "scope": self.scope,
