@@ -6,7 +6,9 @@ Security notes
 T1  / SR-01 : Phone-based identity; phone verified by SMS before full access.
               Argon2 hashing configured globally in settings.PASSWORD_HASHERS.
 T2  / SR-02 : OTP required for new-device login and payout-number change.
-              Codes stored as SHA-256 hashes; plain code sent via SMS then discarded.
+              Codes stored as HMAC-SHA256 keyed with OTP_HMAC_KEY (server secret).
+              Keying with a server secret prevents offline brute-force of 6-digit
+              codes (only 10^6 values) even if the database is leaked.
               Max 5 attempts; 5-minute expiry.
 T9  / SR-09 : Phone number is private.  It is NEVER included in public API
               responses; shared only inside an order between its buyer and seller.
@@ -14,6 +16,7 @@ T17 / SR-12 : OTP code hashes must never appear in logs or error messages.
 """
 
 import hashlib
+import hmac
 import uuid
 
 from django.contrib.auth.models import (
@@ -193,8 +196,10 @@ class OtpCode(models.Model):
     )
     purpose = models.CharField(max_length=30, choices=Purpose.choices)
 
-    # T17/SR-02: SHA-256 hex digest of the plain code; plain code is discarded
-    # after SMS dispatch and NEVER stored here.
+    # T2/T17/SR-02: HMAC-SHA256(key=OTP_HMAC_KEY, msg=plain_code) hex digest.
+    # Keying with a server secret prevents offline brute-force of the 10^6
+    # possible 6-digit codes.  The plain code is discarded after SMS dispatch
+    # and NEVER stored here.
     code_hash = models.CharField(max_length=64)  # nosemgrep
 
     expires_at = models.DateTimeField()
@@ -226,11 +231,31 @@ class OtpCode(models.Model):
     @staticmethod
     def hash_code(plain_code: str) -> str:
         """
-        Return the SHA-256 hex digest of plain_code.
-        Call this before saving and again during verification.
-        The plain code must NEVER be passed to logging calls (T17).
+        Return HMAC-SHA256(key=OTP_HMAC_KEY, msg=plain_code) as a hex digest.
+
+        A server-side key prevents offline brute-force of 6-digit codes (T2/SR-02):
+        an attacker with only the database cannot enumerate all 10^6 values without
+        the key.  The plain code must NEVER be passed to logging calls (T17).
         """
-        return hashlib.sha256(plain_code.encode()).hexdigest()
+        from django.conf import settings
+
+        return hmac.new(
+            key=settings.OTP_HMAC_KEY.encode(),
+            msg=plain_code.encode(),
+            digestmod=hashlib.sha256,
+        ).hexdigest()
+
+    @staticmethod
+    def verify_code(plain_code: str, stored_hash: str) -> bool:
+        """
+        Constant-time comparison of HMAC(plain_code) against stored_hash.
+
+        hmac.compare_digest prevents timing-based side-channel attacks that could
+        reveal whether individual characters of the hash match (T2/SR-02).
+        Returns True only when the codes match.
+        """
+        computed = OtpCode.hash_code(plain_code)
+        return hmac.compare_digest(computed, stored_hash)
 
     def __str__(self):
         return f"OtpCode({self.purpose}) for {self.user_id}"

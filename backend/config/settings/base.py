@@ -190,6 +190,13 @@ SIMPLE_JWT = {
 }
 
 # ---------------------------------------------------------------------------
+# OTP HMAC key – used to key HMAC-SHA256 for OTP code storage (T2 / SR-02)
+# A server-side key makes the hash unbrute-forceable offline even for 6-digit
+# codes (10^6 values).  Must be at least 32 random characters.  Never log it.
+# ---------------------------------------------------------------------------
+OTP_HMAC_KEY = env("OTP_HMAC_KEY")  # T2/SR-02: keyed hash prevents offline brute-force
+
+# ---------------------------------------------------------------------------
 # Django Channels – Redis channel layer (SR-10: WebSockets over TLS)
 # ---------------------------------------------------------------------------
 CHANNEL_LAYERS = {

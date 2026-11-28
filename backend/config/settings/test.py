@@ -17,6 +17,11 @@ os.environ.setdefault(
     "SECRET_KEY", "django-insecure-test-only-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 )  # nosemgrep # noqa: S105
 os.environ.setdefault("DATABASE_URL", "sqlite://:memory:")
+# T2/SR-02: test-only HMAC key; never used outside CI/test environments
+os.environ.setdefault(
+    "OTP_HMAC_KEY",
+    "test-otp-hmac-key-not-real-aaaaaaaaaaaaaaaaaaaaa",
+)  # nosemgrep # noqa: S105
 
 from .base import *  # noqa: F401, F403
 
