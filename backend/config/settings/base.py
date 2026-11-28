@@ -165,7 +165,14 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": "20/min",
         "user": "200/min",
+        # Auth-specific scopes (T13/SR-11)
+        "otp_phone": "3/hour",  # per normalised phone – prevents SMS pumping
+        "otp_ip": "20/hour",  # per IP – catches multi-number SMS pumping
+        "login": "10/15min",  # per IP – T2 brute-force protection
     },
+    # NUM_PROXIES: 0 = trust no X-Forwarded-For (dev/test); 1 in prod behind Nginx.
+    # Prevents IP throttle bypass via spoofed X-Forwarded-For header (T13/SR-11).
+    "NUM_PROXIES": env.int("NUM_PROXIES", default=0),
     # OpenAPI schema generation
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     # Return generic errors; stack traces only in DEBUG mode (Security rule 12)
@@ -176,10 +183,12 @@ REST_FRAMEWORK = {
 # JWT – djangorestframework-simplejwt (SR-02 / T2)
 # ---------------------------------------------------------------------------
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),  # short-lived access tokens
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        minutes=10
+    ),  # T2: short window limits replay window
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-    "ROTATE_REFRESH_TOKENS": True,  # each use issues a new refresh token
-    "BLACKLIST_AFTER_ROTATION": True,  # old refresh tokens are invalidated
+    "ROTATE_REFRESH_TOKENS": True,  # each refresh issues a new token (T2/SR-02)
+    "BLACKLIST_AFTER_ROTATION": True,  # old refresh token is immediately invalid (T2/SR-02)
     "UPDATE_LAST_LOGIN": True,
     "ALGORITHM": "HS256",
     "SIGNING_KEY": env("SECRET_KEY"),
@@ -195,6 +204,23 @@ SIMPLE_JWT = {
 # codes (10^6 values).  Must be at least 32 random characters.  Never log it.
 # ---------------------------------------------------------------------------
 OTP_HMAC_KEY = env("OTP_HMAC_KEY")  # T2/SR-02: keyed hash prevents offline brute-force
+
+# ---------------------------------------------------------------------------
+# Cache – required for DRF throttles (SR-11/T13) and login-lockout counters
+# Default: LocMemCache (per-process, fine for single-worker dev).
+# PRODUCTION: set CACHE_URL=redis://... to share counters across workers.
+# See docs/threat-model.md T13 residual-risk note.
+# ---------------------------------------------------------------------------
+CACHES = {
+    "default": env.cache("CACHE_URL", default="locmemcache://"),
+}
+
+# ---------------------------------------------------------------------------
+# SMS backend (T13/SR-11)
+# ConsoleSmsBackend is the dev default; it refuses DEBUG=False.
+# Production must set SMS_BACKEND to a real provider in the environment.
+# ---------------------------------------------------------------------------
+SMS_BACKEND = env("SMS_BACKEND", default="integrations.sms.ConsoleSmsBackend")
 
 # ---------------------------------------------------------------------------
 # Django Channels – Redis channel layer (SR-10: WebSockets over TLS)

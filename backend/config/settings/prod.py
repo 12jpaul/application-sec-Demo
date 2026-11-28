@@ -3,6 +3,7 @@ Production settings.
 All security headers and HTTPS enforcement are active here.
 Deployed behind Nginx (see docs/deployment-checklist.md).
 """
+
 import environ
 
 from .base import *  # noqa: F401, F403
@@ -34,29 +35,46 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 # ---------------------------------------------------------------------------
 # HSTS – tell browsers to only connect over HTTPS (SR-10)
 # ---------------------------------------------------------------------------
-SECURE_HSTS_SECONDS = 31536000          # 1 year
+SECURE_HSTS_SECONDS = 31536000  # 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
 # ---------------------------------------------------------------------------
 # Cookie security (T2: account takeover)
 # ---------------------------------------------------------------------------
-SESSION_COOKIE_SECURE = True    # only sent over HTTPS
-CSRF_COOKIE_SECURE = True       # only sent over HTTPS
+SESSION_COOKIE_SECURE = True  # only sent over HTTPS
+CSRF_COOKIE_SECURE = True  # only sent over HTTPS
 SESSION_COOKIE_HTTPONLY = True  # not accessible from JavaScript
 CSRF_COOKIE_HTTPONLY = True
 
 # ---------------------------------------------------------------------------
 # Additional security headers
 # ---------------------------------------------------------------------------
-SECURE_CONTENT_TYPE_NOSNIFF = True      # prevent MIME-type sniffing (T10)
-X_FRAME_OPTIONS = "DENY"                # prevent clickjacking (T10)
+SECURE_CONTENT_TYPE_NOSNIFF = True  # prevent MIME-type sniffing (T10)
+X_FRAME_OPTIONS = "DENY"  # prevent clickjacking (T10)
 SECURE_REFERRER_POLICY = "same-origin"  # limit Referer header leakage (T9)
 
 # ---------------------------------------------------------------------------
 # CSRF trusted origins – loaded from env (comma-separated)
 # ---------------------------------------------------------------------------
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+
+# ---------------------------------------------------------------------------
+# SMS backend – must be a real provider; no default (T13/SR-11)
+# ConsoleSmsBackend raises ImproperlyConfigured when DEBUG=False anyway,
+# but being explicit here prevents accidental omission.
+# ---------------------------------------------------------------------------
+SMS_BACKEND = env("SMS_BACKEND")  # required; no fallback in production
+
+# ---------------------------------------------------------------------------
+# Cache – must be Redis in production for cross-worker throttle sharing (T13)
+# See docs/threat-model.md T13 residual-risk note on LocMemCache.
+# ---------------------------------------------------------------------------
+CACHES = {
+    "default": env.cache(
+        "CACHE_URL"
+    ),  # required; locmemcache:// is not acceptable in prod
+}
 
 # ---------------------------------------------------------------------------
 # Channels – Redis in production (must use TLS in prod: rediss://)
@@ -89,4 +107,7 @@ LOGGING["handlers"]["mail_admins"] = {  # noqa: F405
     "class": "django.utils.log.AdminEmailHandler",
     "filters": ["require_debug_false"],  # noqa: F405
 }
-LOGGING["loggers"]["django.request"]["handlers"] = ["mail_admins", "console"]  # noqa: F405
+LOGGING["loggers"]["django.request"]["handlers"] = [  # noqa: F405
+    "mail_admins",
+    "console",
+]

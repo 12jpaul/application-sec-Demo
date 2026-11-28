@@ -22,6 +22,12 @@ os.environ.setdefault(
     "OTP_HMAC_KEY",
     "test-otp-hmac-key-not-real-aaaaaaaaaaaaaaaaaaaaa",
 )  # nosemgrep # noqa: S105
+# T13/SR-11: use in-memory cache (no Redis needed in CI)
+os.environ.setdefault("CACHE_URL", "locmemcache://")
+# T13/SR-11: use in-memory SMS backend (OTPs readable from integrations.sms._outbox)
+os.environ.setdefault("SMS_BACKEND", "integrations.sms.LocMemSmsBackend")
+# T13/SR-11: 0 proxies in test — X-Forwarded-For is not trusted
+os.environ.setdefault("NUM_PROXIES", "0")
 
 from .base import *  # noqa: F401, F403
 
