@@ -180,40 +180,11 @@ jobs:
             factory-boy==3.3.3 \
             uvicorn==0.34.2
 
-      - name: Show installed packages
-        run: pip list
-
-      - name: Diagnose – show all warnings as messages
-        env:
-          DJANGO_SETTINGS_MODULE: config.settings.test
-          SECRET_KEY: ci-only-secret-key-not-real
-        # Show every warning (category + source module) without converting to errors.
-        # This reveals which module is triggering the filterwarnings=error failure.
-        continue-on-error: true
-        run: |
-          pytest -v \
-            --override-ini="filterwarnings=always" \
-            -W always \
-            --tb=short \
-            -rw 2>&1 | tee /tmp/pytest-no-warnings.txt
-          echo "exit_code=$?" >> /tmp/pytest-no-warnings.txt
-
       - name: Run pytest
         env:
           DJANGO_SETTINGS_MODULE: config.settings.test
           SECRET_KEY: ci-only-secret-key-not-real
-        run: |
-          pytest -v 2>&1 | tee /tmp/pytest-full.txt
-          exit ${PIPESTATUS[0]}
-
-      - name: Upload pytest output
-        if: always()
-        uses: actions/upload-artifact@v4.5.0
-        with:
-          name: pytest-output
-          path: |
-            /tmp/pytest-no-warnings.txt
-            /tmp/pytest-full.txt
+        run: pytest -v
 
   # ─────────────────────────────────────────────────────────────────────────
   # 5. Flutter – dart analyze + flutter test
